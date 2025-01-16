@@ -1,0 +1,10 @@
+# This can be used for pending some faulty addons temporarily.
+# Please fix them as soon as possible!
+
+ocm-gateway-manager-addon
+model-serving
+flink-kubernetes-operator
+vela-core-shard-manager
+grafana
+loki
+prometheus-server

@@ -1,0 +1,57 @@
+name: Publish Registry to Github Page
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch: {}
+
+jobs:
+  build-and-publish:
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      URL: https://github.com/zncdatadev/kubedoop-vela
+      GO_VERSION: 1.19
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+
+      - name: package-addon-gen-index
+        run: |
+          cd ./addons/
+          go run ../hack/addons/syn_addon_package.go ./ ${{ env.URL }}/official
+          ls ./
+          cat ./index.yaml
+          mkdir -p ../docs/official
+          mv ./index.yaml ../docs/official/
+          mv ./*.tgz ../docs/official/
+
+      # - name: package-addon-gen-index-experimental
+      #   run: |
+      #     cd ./experimental/addons/
+      #     go run ../../hack/addons/syn_addon_package.go ./ ${{ env.URL }}/experimental
+      #     ls ./
+      #     cat ./index.yaml
+      #     mkdir -p ../../docs/experimental
+      #     mv ./index.yaml ../../docs/experimental/
+      #     mv ./*.tgz ../../docs/experimental/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: docs/
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
