@@ -1,0 +1,14 @@
+name: commons-operator
+version: 0.1.0
+description: Operator for common objects of the Kubedoop.
+icon: https://github.com/zncdatadev/kubedoop/raw/main/docs/assets/icon_kubedoop.png
+url: https://github.com/zncdatadev/commons-operator
+
+tags:
+  - kubedoop
+
+dependencies:
+  - name: fluxcd
+  
+system:
+  vela: ">=v1.9.0"
