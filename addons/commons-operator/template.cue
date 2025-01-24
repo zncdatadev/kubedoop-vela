@@ -1,5 +1,7 @@
 package main
 
+_targetNamespace: parameter.namespace
+
 output: {
 	apiVersion: "core.oam.dev/v1beta1"
 	kind:       "Application"
@@ -11,22 +13,32 @@ output: {
 				properties: objects: [{
 					apiVersion: "v1"
 					kind:       "Namespace"
-					metadata: name: parameter.namespace
+					metadata: name: _targetNamespace
 				}]
 			},
 			commonsOperator
 		]
-		policies: [{
-			type: "topology"
-			name: "deploy-topology"
-			properties: {
-				if parameter.clusters != _|_ {
-					clusters: parameter.clusters
+		policies: [
+			{
+				type: "shared-resource"
+				name: "commons-operator-ns"
+				properties: rules: [{
+					selector: resourceTypes: ["Namespace"]
+				}]
+			},
+			{
+				type: "topology"
+				name: "deploy-topology"
+				properties: {
+					namespace: _targetNamespace
+					if parameter.clusters != _|_ {
+						clusters: parameter.clusters
+					}
+					if parameter.clusters == _|_ {
+						clusterLabelSelector: {}
+					}
 				}
-				if parameter.clusters == _|_ {
-					clusterLabelSelector: {}
-				}
-			}
-		}]
+			},
+		]
 	}
 }
