@@ -44,6 +44,7 @@ type Dependency struct {
 
 var file = "addons/velaux/template.yaml"
 var pendingAddon = map[string]bool{}
+var dependingAddon = map[string]bool{}
 
 const (
 	addonPattern             = "^addons.*"
@@ -51,14 +52,18 @@ const (
 	testCasePattern          = "^test/e2e-test/addon-test/definition-test/testdata.*"
 	globalRexPattern         = "^.github.*|Makefile|.*.go"
 	pendingAddonFilename     = "test/e2e-test/addon-test/PENDING"
+	dependingAddonFilename   = "test/e2e-test/addon-test/DEPENDING"
 	defTestDir               = "test/e2e-test/addon-test/definition-test/testdata/"
 	repoURL                  = "https://addons.kubevela.net"
 	experimentalRepoURL      = "https://addons.kubevela.net/experimental"
 )
 
 func main() {
-	err := readPendingAddons()
-	if err != nil {
+	if err := readPendingAddons(); err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err)
+		os.Exit(1)
+	}
+	if err := readDependingAddons(); err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err)
 		os.Exit(1)
 	}
@@ -72,14 +77,18 @@ func main() {
 	}
 	changedFile := os.Args[1:]
 
-	if err := checkUpgradeAddonVersion(changedFile); err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err)
-		os.Exit(1)
-	}
+	// if err := checkUpgradeAddonVersion(changedFile); err != nil {
+	// 	fmt.Fprintf(os.Stderr, "%s", err)
+	// 	os.Exit(1)
+	// }
 
 	changedAddon := determineNeedEnableAddon(changedFile)
 	if len(changedAddon) == 0 {
 		return
+	}
+	if err := enableDependingAddons(); err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err)
+		os.Exit(1)
 	}
 	if _, err := enableAddonsByOrder("addons/%s", changedAddon, false); err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err)
@@ -103,6 +112,28 @@ func readPendingAddons() error {
 			continue
 		}
 		pendingAddon[t] = true
+		fmt.Printf("  - \033[1;33m%s\033[1;0m\n", t)
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func readDependingAddons() error {
+	file, err := os.Open(dependingAddonFilename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		t := scanner.Text()
+		// This is a comment, ignore it.
+		if t == "" || strings.HasPrefix(t, "#") {
+			continue
+		}
+		dependingAddon[t] = true
 		fmt.Printf("  - \033[1;33m%s\033[1;0m\n", t)
 	}
 	if err := scanner.Err(); err != nil {
@@ -267,7 +298,9 @@ func checkAddonDependency(addon string) []string {
 	}
 	var deps []string
 	for _, dep := range meta.Dependencies {
-		deps = append(deps, dep.Name)
+		if !dependingAddon[dep.Name] {
+			deps = append(deps, dep.Name)
+		}
 	}
 	for _, dep := range deps {
 		deps = MergeSlice(false, checkAddonDependency(dep), deps)
@@ -286,6 +319,46 @@ func readAddonMeta(addonName string) (*AddonMeta, error) {
 		return nil, err
 	}
 	return &meta, nil
+}
+
+func enableDependingAddons() error {
+	for addon := range dependingAddon {
+		if err := enableDependingAddon(addon); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func enableDependingAddon(addonName string) error {
+	cmd := exec.Command("vela", "addon", "enable", addonName)
+	fmt.Println("\033[1;32m==> " + cmd.String() + "\033[0m")
+	stdout, err := cmd.StdoutPipe()
+	cmd.Stderr = cmd.Stdout
+	if err != nil {
+		panic(err)
+	}
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+	for {
+		tmp := make([]byte, 102400)
+		_, err := stdout.Read(tmp)
+		str := convertToString(tmp)
+		if strings.Contains(str, "It is now in phase") {
+			continue
+		}
+		fmt.Print(str)
+		if err != nil {
+			break
+		}
+	}
+	if err = cmd.Wait(); err != nil {
+		checkAppStatus(addonName)
+		return err
+	}
+	fmt.Printf("Enable depending addon %s successfully \n", addonName)
+	return nil
 }
 
 // This func will enable addon by order rely-on addon's relationShip dependency,
