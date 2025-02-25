@@ -19,12 +19,13 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -223,7 +224,7 @@ func genAffectedFromChangedFiles(changedFile []string, filter string, regexPatte
 		regRes := regx.FindString(s)
 		if len(regRes) != 0 {
 			fmt.Println(regRes)
-			if needEnabledAddon[regRes] == false {
+			if !needEnabledAddon[regRes] {
 				needEnabledAddon[regRes] = true
 				needEnabledAddons = append([]string{regRes}, needEnabledAddons...)
 			}
@@ -263,7 +264,7 @@ func checkAffectedAddon(addonName string) []string {
 			if len(meta.Dependencies) != 0 {
 				for _, dependency := range meta.Dependencies {
 					if dependency.Name == addonName {
-						if needEnabledAddonMap[meta.Name] == false {
+						if !needEnabledAddonMap[meta.Name] {
 							needEnabledAddonMap[meta.Name] = true
 							needEnabledAddon = append(needEnabledAddon, meta.Name)
 						}
@@ -560,7 +561,7 @@ func loopCheck() error {
 	if err != nil {
 		return err
 	}
-	failedAddons, err := enableAddonsByOrder("%s", addons, true)
+	failedAddons, _ := enableAddonsByOrder("%s", addons, true)
 	failed := false
 	if len(failedAddons) != 0 {
 		os.WriteFile("/root/failed-addons", []byte(fmt.Sprint(failedAddons)), 0644)
@@ -591,7 +592,7 @@ func calculateAddonsNameFromRepoUrl(url string) ([]string, error) {
 	if body.StatusCode != 200 {
 		return nil, fmt.Errorf("fetch idnex.yaml meeting not 200 http code")
 	}
-	indexByte, err := ioutil.ReadAll(body.Body)
+	indexByte, err := io.ReadAll(body.Body)
 	if err != nil || len(indexByte) == 0 {
 		fmt.Println(err)
 		return nil, fmt.Errorf("failed to ready index bytes")
@@ -619,13 +620,31 @@ func MergeSlice(right bool, source []string, target []string) []string {
 		smap[s] = true
 	}
 	for _, t := range target {
-		if !smap[t] {
-			if right {
+		if right {
+			if !smap[t] {
 				source = append(source, t)
-			} else {
-				source = append([]string{t}, source...)
 			}
+		} else {
+			if !smap[t] {
+				source = append([]string{t}, source...)
+			} else {
+				source = append([]string{t}, removeSlice(source, t)...)
+			}
+
 		}
+	}
+	return source
+}
+
+func removeSlice(source []string, t string) []string {
+	idx := -1
+	for i := range source {
+		if source[i] == t {
+			idx = i
+		}
+	}
+	if idx > -1 {
+		return slices.Delete(slices.Clone(source), idx, idx+1)
 	}
 	return source
 }
