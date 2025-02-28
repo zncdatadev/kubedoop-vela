@@ -1,0 +1,60 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: zookeeper-tls-cluster
+spec:
+  components:
+    - name: "zookeeper-tls-cluster"
+      type: "k8s-objects"
+      properties: 
+        objects:
+          - apiVersion: zookeeper.kubedoop.dev/v1alpha1
+            kind: ZookeeperCluster
+            metadata: 
+              name: simple-zk
+            spec:
+              clusterConfig:
+                authentication:
+                  - authenticationClass: zk-client-tls
+                tls:
+                  serverSecretClass: tls
+                  quorumSecretClass: tls
+              image:
+                productVersion: 3.9.2
+              servers:
+                roleGroups:
+                  default:
+                    replicas: 3
+          - apiVersion: authentication.kubedoop.dev/v1alpha1
+            kind: AuthenticationClass
+            metadata:
+              name: zk-client-tls
+            spec:
+              provider:
+                tls:
+                  clientCertSecretClass: zk-client-auth-secret
+          - apiVersion: secrets.kubedoop.dev/v1alpha1
+            kind: SecretClass
+            metadata:
+              name: zk-client-auth-secret
+            spec:
+              backend:
+                autoTls:
+                  ca:
+                    secret:
+                      name: secret-provisioner-tls-zk-client-ca
+                      namespace: demo
+                    autoGenerate: true
+          - apiVersion: zookeeper.kubedoop.dev/v1alpha1
+            kind: ZookeeperZnode
+            metadata:
+              name: simple-znode
+            spec:
+              clusterRef:
+                name: simple-zk
+  policies:
+    - name: topology-demo
+      type: topology
+      properties:
+        clusters: ['local']
+        namespace: demo
