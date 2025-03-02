@@ -13,14 +13,14 @@ spec:
             metadata: 
               name: simple-zk
             spec:
+              image:
+                productVersion: 3.9.2
               clusterConfig:
                 authentication:
                   - authenticationClass: zk-client-tls
                 tls:
                   serverSecretClass: tls
                   quorumSecretClass: tls
-              image:
-                productVersion: 3.9.2
               servers:
                 roleGroups:
                   default:

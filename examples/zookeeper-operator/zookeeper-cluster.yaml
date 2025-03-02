@@ -13,10 +13,10 @@ spec:
             metadata: 
               name: simple-zk
             spec:
-              clusterConfig:
-                listenerClass: external-unstable
               image:
                 productVersion: 3.9.2
+              clusterConfig:
+                listenerClass: external-unstable
               servers:
                 roleGroups:
                   default:
