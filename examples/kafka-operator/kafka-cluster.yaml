@@ -1,0 +1,32 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: kafka-cluster
+spec:
+  components:
+    - name: "kafka-cluster"
+      type: "k8s-objects"
+      properties: 
+        objects:
+          - apiVersion: kafka.kubedoop.dev/v1alpha1
+            kind: KafkaCluster
+            metadata: 
+              name: simple-kafka
+            spec:
+              image:
+                productVersion: 3.7.1
+              clusterConfig:
+                zookeeperConfigMapName: simple-kafka-znode
+              brokers:
+                config:
+                  bootstrapListenerClass: external-unstable
+                  brokerListenerClass: external-unstable
+                roleGroups:
+                  default:
+                    replicas: 3
+  policies:
+    - name: topology-demo
+      type: topology
+      properties:
+        clusters: ['local']
+        namespace: demo
