@@ -1,0 +1,16 @@
+name: hive-operator
+version: 0.1.0
+description: Operator for Apache Hive.
+icon: https://github.com/zncdatadev/kubedoop/raw/main/docs/assets/icon_kubedoop.png
+url: https://github.com/zncdatadev/hive-operator
+
+tags:
+  - kubedoop
+
+dependencies:
+  - name: commons-operator
+  - name: listener-operator
+  - name: secret-operator
+  
+system:
+  vela: ">=v1.9.0"
