@@ -1,0 +1,75 @@
+# helm install minio \
+#     minio \
+#     --repo https://charts.bitnami.com/bitnami \
+#     --set auth.rootUser=minio-access-key \
+#     --set auth.rootPassword=minio-secret-key
+# helm install hive bitnami/postgresql --version=12.1.5 \
+# --set postgresqlUsername=hive \
+# --set postgresqlPassword=hive \
+# --set postgresqlDatabase=hive
+---
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: hive-cluster
+spec:
+  components:
+    - name: "hive-cluster"
+      type: "k8s-objects"
+      properties: 
+        objects:
+          - apiVersion: hive.kubedoop.dev/v1alpha1
+            kind: HiveCluster
+            metadata: 
+              name: simple-hive-postgres
+            spec:
+              image:
+                productVersion: 4.0.1
+              clusterConfig:
+                database:
+                  connString: jdbc:postgresql://postgresql:5432/hive
+                  credentialsSecret: hive-credentials
+                  dbType: postgres
+              s3:
+                inline:
+                  host: minio
+                  port: 9000
+                  accessStyle: Path
+                  credentials:
+                    secretClass: simple-hive-s3-secret-class
+              metastore:
+                roleGroups:
+                  default:
+                    replicas: 1
+          - apiVersion: secrets.kubedoop.dev/v1alpha1
+            kind: SecretClass
+            metadata:
+              name: simple-hive-s3-secret-class
+            spec:
+              backend:
+                k8sSearch:
+                  searchNamespace:
+                    pod: {}
+          - apiVersion: v1
+            kind: Secret
+            metadata:
+              name: simple-hive-s3-secret
+              labels:
+                secrets.kubedoop.dev/class: simple-hive-s3-secret-class
+            stringData:
+              accessKey: minio-access-key
+              secretKey: minio-secret-key
+          - apiVersion: v1
+            kind: Secret
+            metadata:
+              name: hive-credentials
+            type: Opaque
+            stringData:
+              username: hive
+              password: hive
+  policies:
+    - name: topology-demo
+      type: topology
+      properties:
+        clusters: ['local']
+        namespace: demo
