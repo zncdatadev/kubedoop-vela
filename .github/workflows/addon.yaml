@@ -3,6 +3,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'addons/**'
+      # - 'experimental/addons/**'
+      - 'hack/addons/**'
   workflow_dispatch: {}
 
 jobs:
