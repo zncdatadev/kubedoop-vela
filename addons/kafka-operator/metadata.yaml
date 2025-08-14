@@ -1,5 +1,5 @@
 name: kafka-operator
-version: 0.1.0
+version: 0.2.0
 description: Operator for Apache Kafka.
 icon: https://github.com/zncdatadev/kubedoop/raw/main/docs/assets/icon_kubedoop.png
 url: https://github.com/zncdatadev/kafka-operator
