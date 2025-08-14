@@ -1,10 +1,10 @@
 apiVersion: core.oam.dev/v1beta1
 kind: Application
 metadata:
-  name: kafka-cluster
+  name: kafka-cluster-tls
 spec:
   components:
-    - name: "kafka-cluster"
+    - name: "kafka-cluster-tls"
       type: "k8s-objects"
       properties: 
         objects:

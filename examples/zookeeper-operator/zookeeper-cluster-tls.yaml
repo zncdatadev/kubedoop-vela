@@ -1,10 +1,10 @@
 apiVersion: core.oam.dev/v1beta1
 kind: Application
 metadata:
-  name: zookeeper-tls-cluster
+  name: zookeeper-cluster-tls
 spec:
   components:
-    - name: "zookeeper-tls-cluster"
+    - name: "zookeeper-cluster-tls"
       type: "k8s-objects"
       properties: 
         objects:
